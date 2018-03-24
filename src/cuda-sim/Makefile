@@ -32,9 +32,8 @@ INTEL=0
 DEBUG?=0
 TRACE?=0
 
-CPP = g++ $(SNOW)
 ifeq ($(INTEL),1)
-	CPP = icpc
+	CXX = icpc
 	CC = icc
 endif
 
@@ -79,16 +78,16 @@ libgpgpu_ptx_sim.a: $(OBJS)
 	ar rcs $(OUTPUT_DIR)/libgpgpu_ptx_sim.a $(OUTPUT_DIR)/ptx.tab.o $(OUTPUT_DIR)/lex.ptx_.o $(OUTPUT_DIR)/ptxinfo.tab.o $(OUTPUT_DIR)/lex.ptxinfo_.o $(OBJS)
 
 $(OUTPUT_DIR)/ptx.tab.o: $(OUTPUT_DIR)/ptx.tab.c
-	$(CPP) -c $(OPT) -DYYDEBUG $(OUTPUT_DIR)/ptx.tab.c -o $(OUTPUT_DIR)/ptx.tab.o
+	$(CXX) -c $(OPT) -DYYDEBUG $(OUTPUT_DIR)/ptx.tab.c -o $(OUTPUT_DIR)/ptx.tab.o
 
 $(OUTPUT_DIR)/lex.ptx_.o: $(OUTPUT_DIR)/lex.ptx_.c 
-	$(CPP) -c $(OPT) $(OUTPUT_DIR)/lex.ptx_.c -o $(OUTPUT_DIR)/lex.ptx_.o
+	$(CXX) -c $(OPT) $(OUTPUT_DIR)/lex.ptx_.c -o $(OUTPUT_DIR)/lex.ptx_.o
 
 $(OUTPUT_DIR)/ptxinfo.tab.o: $(OUTPUT_DIR)/ptxinfo.tab.c
-	$(CPP) -c $(OPT) -DYYDEBUG $(OUTPUT_DIR)/ptxinfo.tab.c -o $(OUTPUT_DIR)/ptxinfo.tab.o
+	$(CXX) -c $(OPT) -DYYDEBUG $(OUTPUT_DIR)/ptxinfo.tab.c -o $(OUTPUT_DIR)/ptxinfo.tab.o
 
 $(OUTPUT_DIR)/lex.ptxinfo_.o: $(OUTPUT_DIR)/lex.ptxinfo_.c $(OUTPUT_DIR)/ptxinfo.tab.c
-	$(CPP) -c $(OPT) $(OUTPUT_DIR)/lex.ptxinfo_.c -o $(OUTPUT_DIR)/lex.ptxinfo_.o
+	$(CXX) -c $(OPT) $(OUTPUT_DIR)/lex.ptxinfo_.c -o $(OUTPUT_DIR)/lex.ptxinfo_.o
 
 $(OUTPUT_DIR)/ptx.tab.c: ptx.y
 	bison --name-prefix=ptx_ -v -d ptx.y --file-prefix=$(OUTPUT_DIR)/ptx
@@ -111,9 +110,9 @@ clean:
 	rm -f $(OUTPUT_DIR)/Makefile.makedepend $(OUTPUT_DIR)/Makefile.makedepend.bak
 
 $(OUTPUT_DIR)/%.o: %.c
-	$(CPP) -c $(OPT) $< -o $(OUTPUT_DIR)/$*.o
+	$(CXX) -c $(OPT) $< -o $(OUTPUT_DIR)/$*.o
 $(OUTPUT_DIR)/%.o: %.cc
-	$(CPP) -c $(CXX_OPT) $< -o $(OUTPUT_DIR)/$*.o
+	$(CXX) -c $(CXX_OPT) $< -o $(OUTPUT_DIR)/$*.o
 
 $(OUTPUT_DIR)/instructions.h: instructions.cc
 	@touch $*.h

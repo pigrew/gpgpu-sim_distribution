@@ -66,7 +66,7 @@ ifeq ($(OPENGL_SUPPORT),1)
 	GL = -DOPENGL_SUPPORT
 endif
 
-CPP = g++
+CXX = g++
 CC = gcc
 CREATELIBRARY    =  1
 DEBUG ?= 0
@@ -106,11 +106,11 @@ depend:
 
 $(OUTPUT_DIR)/nvopencl_wrapper: nvopencl_wrapper.cc
 	if [ ! -d bin ]; then mkdir bin; fi
-	g++ $(CCFLAGS) nvopencl_wrapper.cc -I./ -I$(NVOPENCL_INCDIR)/ -L $(NVOPENCL_LIBDIR) -lOpenCL  -o $(OUTPUT_DIR)/bin/nvopencl_wrapper
+	$(CXX) $(CCFLAGS) nvopencl_wrapper.cc -I./ -I$(NVOPENCL_INCDIR)/ -L $(NVOPENCL_LIBDIR) -lOpenCL  -o $(OUTPUT_DIR)/bin/nvopencl_wrapper
 	
 
 $(OUTPUT_DIR)/%.o: %.cc
-	$(CPP) $(CCFLAGS) -I./ -I$(CUDA_INSTALL_PATH)/include  -c $< -o $@
+	$(CXX) $(CCFLAGS) -I./ -I$(CUDA_INSTALL_PATH)/include  -c $< -o $@
 
 clean:
 	rm -f $(PROG)
