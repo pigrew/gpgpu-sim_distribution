@@ -18,7 +18,7 @@ ifeq ($(TAG),dbg)
   OPT = -ggdb -g -O0 -DNTHREADS=1  -gstabs+
 else
   DBG = 
-  OPT = -O3 -msse2 -mfpmath=sse -DNTHREADS=$(NTHREADS)
+  OPT = -O3  -DNTHREADS=$(NTHREADS)
 endif
 
 #CXXFLAGS = -Wall -Wno-unknown-pragmas -Winline $(DBG) $(OPT) 

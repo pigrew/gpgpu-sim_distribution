@@ -29,7 +29,7 @@ ifeq ($(TAG),dbg)
   OPT = -ggdb -fPIC -g -O0 -DNTHREADS=1 -Icacti -lz
 else
   DBG = 
-  OPT = -O3 -fPIC -msse2 -mfpmath=sse -DNTHREADS=$(NTHREADS) -Icacti -lz
+  OPT = -O3 -fPIC -DNTHREADS=$(NTHREADS) -Icacti -lz
   #OPT = -O0 -DNTHREADS=$(NTHREADS)
 endif
 

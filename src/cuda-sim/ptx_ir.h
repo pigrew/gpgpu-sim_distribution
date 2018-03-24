@@ -105,7 +105,7 @@ private:
    int m_is_function;
    bool m_is_non_arch_reg;
 
-   friend class type_info_key_compare;
+   friend struct type_info_key_compare;
 };
 
 class symbol_table;
@@ -135,7 +135,7 @@ public:
    const type_info_key &get_key() const { return m_type_info;}
 
 private:
-   symbol_table *m_scope;
+   //symbol_table *m_scope;
    type_info_key m_type_info;
 };
 
