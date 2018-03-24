@@ -69,7 +69,7 @@ OBJS = $(patsubst %.cc,$(OUTPUT_DIR)/%.o,$(SRCS))
 all: $(OUTPUT_DIR)/$(TARGET)
 
 $(OUTPUT_DIR)/$(TARGET) : $(OBJS)
-	$(CC) $(LDFLAGS) $(OBJS) -o $@ $(LIBS) -pthread
+	$(CXX) $(LDFLAGS) $(OBJS) -o $@ $(LIBS) -pthread
 
 #obj_$(TAG)/%.o : %.cc
 #	$(CXX) -c $(CXXFLAGS) $(INCS) -o $@ $<

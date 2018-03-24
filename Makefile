@@ -151,7 +151,9 @@ $(SIM_LIB_DIR)/libcudart.so: makedirs $(LIBS) cudalib
 			$(SIM_OBJ_FILES_DIR)/$(INTERSIM)/*.o \
 			$(SIM_OBJ_FILES_DIR)/*.o -lm -lz -lGL -pthread \
 			$(MCPAT) \
-			-o $(SIM_LIB_DIR)/libcudart.so
+			-o $(SIM_LIB_DIR)/libcudart_$(GPGPUSIM_BUILD).so
+	rm -f $(SIM_LIB_DIR)/libcudart.so
+	ln -s libcudart_$(GPGPUSIM_BUILD).so $(SIM_LIB_DIR)/libcudart.so
 	if [ ! -f $(SIM_LIB_DIR)/libcudart.so.2 ]; then ln -s libcudart.so $(SIM_LIB_DIR)/libcudart.so.2; fi
 	if [ ! -f $(SIM_LIB_DIR)/libcudart.so.3 ]; then ln -s libcudart.so $(SIM_LIB_DIR)/libcudart.so.3; fi
 	if [ ! -f $(SIM_LIB_DIR)/libcudart.so.4 ]; then ln -s libcudart.so $(SIM_LIB_DIR)/libcudart.so.4; fi

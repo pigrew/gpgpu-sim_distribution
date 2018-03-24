@@ -19,7 +19,7 @@ else
   DBG = 
   OPT = -O3  -DNTHREADS=$(NTHREADS)
 endif
-
+LDFLAGS += -lc++
 #CXXFLAGS = -Wall -Wno-unknown-pragmas -Winline $(DBG) $(OPT) 
 CXXFLAGS += -Wno-unknown-pragmas $(DBG) $(OPT) 
 
@@ -35,7 +35,7 @@ INCLUDES       = -I /usr/include/python2.4 -I /usr/lib/python2.4/config
 all: $(OUTPUT_DIR)/$(TARGET)
 
 $(OUTPUT_DIR)/$(TARGET) : $(OBJS)
-	$(CXX) $(OBJS) -o $@ $(INCS) $(CXXFLAGS) $(LIBS) -pthread
+	$(CXX) $(OBJS) -o $@ $(INCS) $(LDFLAGS) $(LIBS) -pthread
 
 #obj_$(TAG)/%.o : %.cc
 #	$(CXX) -c $(CXXFLAGS) $(INCS) -o $@ $<

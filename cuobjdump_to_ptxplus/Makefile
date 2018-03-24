@@ -4,7 +4,7 @@ YACC		= bison
 YFLAGS		= -t -d --report=all --verbose
 CCFLAGS		= -ggdb -fPIC 
 CXXFLAGS	+= ${CCFLAGS}
-LDFLAGS		+= 
+LDFLAGS		+=  
 OUTPUT_DIR=$(SIM_OBJ_FILES_DIR)/cuobjdump_to_ptxplus
 
 CXXFLAGS += -I $(OUTPUT_DIR) -I $(OUTPUT_DIR)/../cuda-sim/ -I . -I ../src/cuda-sim/
@@ -22,7 +22,7 @@ MAKEFLAGS += --no-builtin-rules
 .SECONDARY:
 
 $(OUTPUT_DIR)/cuobjdump_to_ptxplus: $(OUTPUT_DIR)/cuobjdumpInst.o $(OUTPUT_DIR)/cuobjdumpInstList.o $(OUTPUT_DIR)/cuobjdump_to_ptxplus.o $(PTX_PARSER_OBJECTS) $(SASS_PARSER_OBJECTS) $(ELF_PARSER_OBJECTS) $(HEADER_PARSER_OBJECTS)
-	${CC} ${LDFLAGS} -o $@ $(OUTPUT_DIR)/cuobjdumpInst.o $(OUTPUT_DIR)/cuobjdumpInstList.o $(OUTPUT_DIR)/cuobjdump_to_ptxplus.o $(PTX_PARSER_OBJECTS) $(SASS_PARSER_OBJECTS) $(ELF_PARSER_OBJECTS) $(HEADER_PARSER_OBJECTS)
+	$(CXX) ${LDFLAGS} -o $@ $(OUTPUT_DIR)/cuobjdumpInst.o $(OUTPUT_DIR)/cuobjdumpInstList.o $(OUTPUT_DIR)/cuobjdump_to_ptxplus.o $(PTX_PARSER_OBJECTS) $(SASS_PARSER_OBJECTS) $(ELF_PARSER_OBJECTS) $(HEADER_PARSER_OBJECTS)
 
 
 $(OUTPUT_DIR)/lex.ptx_.c : ../src/cuda-sim/ptx.l
