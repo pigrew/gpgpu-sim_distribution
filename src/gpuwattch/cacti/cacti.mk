@@ -9,7 +9,6 @@ ifndef NTHREADS
   NTHREADS = 8
 endif
 
-
 LIBS = 
 INCS = -lm
 
@@ -22,16 +21,7 @@ else
 endif
 
 #CXXFLAGS = -Wall -Wno-unknown-pragmas -Winline $(DBG) $(OPT) 
-CXXFLAGS = -Wno-unknown-pragmas $(DBG) $(OPT) 
-
-ifeq ($(shell getconf LONG_BIT),64) 
-	CXX = g++ -m64
-	CC  = gcc -m64
-else 
-	CXX = g++ -m32
-	CC  = gcc -m32
-endif 
-
+CXXFLAGS += -Wno-unknown-pragmas $(DBG) $(OPT) 
 
 SRCS  = area.cc bank.cc mat.cc main.cc Ucache.cc io.cc technology.cc basic_circuit.cc parameter.cc \
 		decoder.cc component.cc uca.cc subarray.cc wire.cc htree2.cc \
