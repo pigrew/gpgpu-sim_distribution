@@ -313,29 +313,32 @@ void shader_core_config::reg_options(class OptionParser * opp)
     option_parser_register(opp, "-gpgpu_operand_collector_num_units_gen", OPT_INT32, &gpgpu_operand_collector_num_units_gen,
                 "number of collector units (default = 0)", 
                 "0");
-    option_parser_register(opp, "-gpgpu_operand_collector_num_in_ports_sp", OPT_INT32, &gpgpu_operand_collector_num_in_ports_sp,
+    option_parser_register(opp, "-gpgpu_operand_collector_num_in_ports_sp", OPT_UINT32, &gpgpu_operand_collector_num_in_ports_sp,
                            "number of collector unit in ports (default = 1)", 
                            "1");
-    option_parser_register(opp, "-gpgpu_operand_collector_num_in_ports_sfu", OPT_INT32, &gpgpu_operand_collector_num_in_ports_sfu,
+    option_parser_register(opp, "-gpgpu_operand_collector_num_in_ports_sfu", OPT_UINT32, &gpgpu_operand_collector_num_in_ports_sfu,
                            "number of collector unit in ports (default = 1)", 
                            "1");
-    option_parser_register(opp, "-gpgpu_operand_collector_num_in_ports_mem", OPT_INT32, &gpgpu_operand_collector_num_in_ports_mem,
+    option_parser_register(opp, "-gpgpu_operand_collector_num_in_ports_mem", OPT_UINT32, &gpgpu_operand_collector_num_in_ports_mem,
                            "number of collector unit in ports (default = 1)", 
                            "1");
-    option_parser_register(opp, "-gpgpu_operand_collector_num_in_ports_gen", OPT_INT32, &gpgpu_operand_collector_num_in_ports_gen,
+    option_parser_register(opp, "-gpgpu_operand_collector_num_in_ports_gen", OPT_UINT32, &gpgpu_operand_collector_num_in_ports_gen,
                            "number of collector unit in ports (default = 0)", 
                            "0");
-    option_parser_register(opp, "-gpgpu_operand_collector_num_out_ports_sp", OPT_INT32, &gpgpu_operand_collector_num_out_ports_sp,
+    option_parser_register(opp, "-gpgpu_operand_collector_num_out_ports_sp", OPT_UINT32, &gpgpu_operand_collector_num_out_ports_sp,
                            "number of collector unit in ports (default = 1)", 
                            "1");
-    option_parser_register(opp, "-gpgpu_operand_collector_num_out_ports_sfu", OPT_INT32, &gpgpu_operand_collector_num_out_ports_sfu,
+    option_parser_register(opp, "-gpgpu_operand_collector_num_out_ports_sfu", OPT_UINT32, &gpgpu_operand_collector_num_out_ports_sfu,
                            "number of collector unit in ports (default = 1)", 
                            "1");
-    option_parser_register(opp, "-gpgpu_operand_collector_num_out_ports_mem", OPT_INT32, &gpgpu_operand_collector_num_out_ports_mem,
+    option_parser_register(opp, "-gpgpu_operand_collector_num_out_ports_mem", OPT_UINT32, &gpgpu_operand_collector_num_out_ports_mem,
                            "number of collector unit in ports (default = 1)", 
                            "1");
-    option_parser_register(opp, "-gpgpu_operand_collector_num_out_ports_gen", OPT_INT32, &gpgpu_operand_collector_num_out_ports_gen,
+    option_parser_register(opp, "-gpgpu_operand_collector_num_out_ports_gen", OPT_UINT32, &gpgpu_operand_collector_num_out_ports_gen,
                            "number of collector unit in ports (default = 0)", 
+                           "0");
+    option_parser_register(opp, "-gpgpu_regfile_cache_size", OPT_UINT32, &gpgpu_regfile_cache_size,
+                           "number of registeres cached per thread (default = 0)", 
                            "0");
     option_parser_register(opp, "-gpgpu_coalesce_arch", OPT_INT32, &gpgpu_coalesce_arch, 
                             "Coalescing arch (default = 13, anything else is off for now)", 

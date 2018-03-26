@@ -1317,6 +1317,8 @@ struct shader_core_config : public core_config
     unsigned int gpgpu_operand_collector_num_out_ports_mem;
     unsigned int gpgpu_operand_collector_num_out_ports_gen;
 
+    unsigned int gpgpu_regfile_cache_size;
+    
     int gpgpu_num_sp_units;
     int gpgpu_num_sfu_units;
     int gpgpu_num_mem_units;
