@@ -127,7 +127,7 @@ shader_core_ctx::shader_core_ctx( class gpgpu_sim *gpu,
     
     // Initialize register file cache
     snprintf(name, STRSIZE, "RFC_%03d", m_sid);
-    m_rf_cache = std::unique_ptr<rf_cache>(
+    m_rf_cache = std::shared_ptr<rf_cache>(
         new rf_cache(name,m_config->m_rfc_config,m_sid,get_shader_register_cache_id(), m_icnt, IN_L1I_MISS_QUEUE, config->max_warps_per_shader )
     );
     
@@ -269,7 +269,7 @@ shader_core_ctx::shader_core_ctx( class gpgpu_sim *gpu,
         in_ports.clear(),out_ports.clear(),cu_sets.clear();
     }
     
-    m_operand_collector.init( m_config->gpgpu_num_reg_banks, this );
+    m_operand_collector.init( m_config->gpgpu_num_reg_banks, this, m_rf_cache);
     
     // execute
     m_num_function_units = m_config->gpgpu_num_sp_units + m_config->gpgpu_num_sfu_units + 1; // sp_unit, sfu, ldst_unit
@@ -3015,7 +3015,7 @@ void opndcoll_rfu_t::add_port(port_vector_t & input, port_vector_t & output, uin
     m_in_ports.push_back(input_port_t(input,output,cu_sets));
 }
 
-void opndcoll_rfu_t::init( unsigned num_banks, shader_core_ctx *shader )
+void opndcoll_rfu_t::init( unsigned num_banks, shader_core_ctx *shader, std::shared_ptr<class rf_cache> rfc )
 {
    m_shader=shader;
    m_arbiter.init(m_cu.size(),num_banks);
@@ -3030,6 +3030,7 @@ void opndcoll_rfu_t::init( unsigned num_banks, shader_core_ctx *shader )
    for( unsigned j=0; j<m_cu.size(); j++) {
        m_cu[j]->init(j,num_banks,m_bank_warp_shift,shader->get_config(),this);
    }
+   m_rf_cache = rfc;
    m_initialized=true;
 }
 
@@ -3043,7 +3044,6 @@ int register_bank(int regnum, int wid, unsigned num_banks, unsigned bank_warp_sh
 
 bool opndcoll_rfu_t::writeback( const warp_inst_t &inst )
 {
-   RFC_PRINTF("opndcoll_rfu::writeback()\n");
    assert( !inst.empty() );
    std::list<unsigned> regs = m_shader->get_regs_written(inst);
    std::list<unsigned>::iterator r;
@@ -3052,7 +3052,12 @@ bool opndcoll_rfu_t::writeback( const warp_inst_t &inst )
       unsigned reg = *r;
       unsigned bank = register_bank(reg,inst.warp_id(),m_num_banks,m_bank_warp_shift);
       RFC_PRINTF3("opndcoll_rfu::writeback():warp=%d,reg=%d,bank=%d\n",inst.warp_id(),reg,bank);
-      
+      if(m_rf_cache->Enabled()) {
+          if(!m_rf_cache->IsCached(inst.warp_id(), reg)) {
+              m_rf_cache->Insert(inst.warp_id(), reg);
+          }
+          m_rf_cache->LogWrite(inst.warp_id(), reg);
+      }   
       if( m_arbiter.bank_idle(bank) ) {
           m_arbiter.allocate_bank_for_write(bank,op_t(&inst,reg,m_num_banks,m_bank_warp_shift));
       } else {

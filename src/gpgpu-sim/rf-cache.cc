@@ -14,7 +14,7 @@ rf_cache::rf_cache(
    const char *name, cache_config &config, int core_id, int type_id,
      mem_fetch_interface *memport, enum mem_fetch_status status, int maxWarpsPerCore )
     : read_only_cache(name, config, core_id, type_id, memport, status),
-        m_maxWarps(maxWarpsPerCore)
+        m_maxWarps(maxWarpsPerCore), m_insertCount(0L),m_writeCount(0L), m_evictCount(0L)
 {
     int i;
     printf("RFC: Constructing core=%d\n", core_id);
@@ -32,10 +32,12 @@ bool rf_cache::Enabled() const {
     return (m_config.m_nset) > 0;
 }
 void rf_cache::Insert(int warp_id, int reg_id) {
+    printf("Inserting new RFC entry warp=%d, reg=%d, ix=%d\n",warp_id,reg_id,m_nextIx[warp_id]);
     int n = warp_id * m_config.m_nset + m_nextIx[warp_id];
     assert(m_cachedRows[n] == -1);
     m_cachedRows[n] = reg_id;
     m_nextIx[warp_id] = (m_nextIx[warp_id]+1)%m_config.m_nset;
+    m_insertCount++;
 }
 void rf_cache::FreeWarpCache(int warp_id) {
     printf("RFC: Empty Cache; warp=%d\n",warp_id);
@@ -50,4 +52,23 @@ bool rf_cache::IsCached(int warp_id, int reg_id) const {
             return true;
     }
     return false;
+}
+void rf_cache::LogWrite(int warp_id, int reg_id) {
+    m_writeCount++;    
+}
+
+int rf_cache::EmptyLines(int warp_id) const {
+    int n=0;
+    for(unsigned int i=0; i<m_config.m_nset; i++) {
+        if(m_cachedRows[warp_id*m_config.m_nset + i] == -1) {
+            n++;
+        }
+    }
+    return n;
+}
+void rf_cache::Evict(int warp_id) {
+    int n = warp_id * m_config.m_nset + m_nextIx[warp_id];
+    assert(m_cachedRows[n] != -1);
+    m_cachedRows[n] = -1;
+    m_evictCount++;
 }

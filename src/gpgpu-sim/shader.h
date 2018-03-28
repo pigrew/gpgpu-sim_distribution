@@ -523,7 +523,7 @@ public:
    typedef std::vector<register_set*> port_vector_t;
    typedef std::vector<unsigned int> uint_vector_t;
    void add_port( port_vector_t & input, port_vector_t & ouput, uint_vector_t cu_sets);
-   void init( unsigned num_banks, shader_core_ctx *shader );
+   void init( unsigned num_banks, shader_core_ctx *shader, std::shared_ptr<class rf_cache> rfc );
 
    // modifiers
    bool writeback( const warp_inst_t &warp ); // might cause stall 
@@ -904,6 +904,7 @@ private:
    //port_to_du_t                     m_dispatch_units;
    //std::map<warp_inst_t**,std::list<collector_unit_t*> > m_free_cu;
    shader_core_ctx                 *m_shader;
+   std::shared_ptr<class rf_cache>        m_rf_cache;
 };
 
 class barrier_set_t {
@@ -1830,7 +1831,7 @@ public:
     std::vector<register_set> m_pipeline_reg;
     Scoreboard               *m_scoreboard;
     opndcoll_rfu_t            m_operand_collector;
-    std::unique_ptr<rf_cache> m_rf_cache;
+    std::shared_ptr<rf_cache> m_rf_cache;
     //schedule
     std::vector<scheduler_unit*>  schedulers;
 
