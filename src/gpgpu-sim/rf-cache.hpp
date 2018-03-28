@@ -9,17 +9,19 @@ class rf_cache : public read_only_cache {
                  int maxWarpsPerCore);
         virtual ~rf_cache();
         void FreeWarpCache(int warp_id);
-        bool IsCached(int warp_id, int reg_id) const;
+        bool IsCached(int warp_id, int reg_id, bool markUsed, bool logWriteHit, bool logReadHit);
         bool Enabled() const;
         void Insert(int warp_id, int reg_id); // Insert an entry into the cache. There MUST be a free space before calling this; does not increment write counter
-        void LogWrite(int warp_id, int reg_id);
-        int  EmptyLines(int warp_id) const;
-        void Evict(int warp_id); // Evict the proper cache line, and increment the eviction counter
+        int  EmptyLineCount(int warp_id) const;
+        // Mark a register as evicted:
+        //   Increment the eviction counter
+        //   Returns register number that was evicted
+        int Evict(int warp_id);
     protected:
+        int m_core_id;
         int m_maxWarps;
         int* m_cachedRows;
-        short* m_nextIx;
         // Statistics:
-        long m_insertCount, m_writeCount, m_evictCount;
+        long m_insertCount, m_writeCount, m_evictCount, m_readHitCount;
 };
 #endif // RF_CACHE_H

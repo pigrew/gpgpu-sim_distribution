@@ -27,6 +27,8 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <float.h>
+#include <algorithm>
+#include <vector>
 #include "shader.h"
 #include "gpu-sim.h"
 #include "addrdec.h"
@@ -53,8 +55,8 @@
     
 #define RFC_PRINTF(a) (printf("RFC(%s): " a,__FUNCTION__))
 #define RFC_PRINTF1(a,b) (printf("RFC(%s): " a,__FUNCTION__,b))
-#define RFC_PRINTF2(a,b,c) (printf("RFC(%s): " a,__UNCTION__,b,c))
-#define RFC_PRINTF3(a,b,c,d) (printf("RFC(%s): " a,__PRETTY_FUNCTION__,b,c,d))
+#define RFC_PRINTF2(a,b,c) (printf("RFC(%s): " a,__FUNCTION__,b,c))
+#define RFC_PRINTF3(a,b,c,d) (printf("RFC(%s): " a,__FUNCTION__,b,c,d))
 /////////////////////////////////////////////////////////////////////////////
 
 std::list<unsigned> shader_core_ctx::get_regs_written( const inst_t &fvt ) const
@@ -3044,26 +3046,37 @@ int register_bank(int regnum, int wid, unsigned num_banks, unsigned bank_warp_sh
 
 bool opndcoll_rfu_t::writeback( const warp_inst_t &inst )
 {
-   assert( !inst.empty() );
-   std::list<unsigned> regs = m_shader->get_regs_written(inst);
-   std::list<unsigned>::iterator r;
-   unsigned n=0;
-   for( r=regs.begin(); r!=regs.end();r++,n++ ) {
-      unsigned reg = *r;
-      unsigned bank = register_bank(reg,inst.warp_id(),m_num_banks,m_bank_warp_shift);
-      RFC_PRINTF3("opndcoll_rfu::writeback():warp=%d,reg=%d,bank=%d\n",inst.warp_id(),reg,bank);
-      if(m_rf_cache->Enabled()) {
-          if(!m_rf_cache->IsCached(inst.warp_id(), reg)) {
-              m_rf_cache->Insert(inst.warp_id(), reg);
-          }
-          m_rf_cache->LogWrite(inst.warp_id(), reg);
-      }   
-      if( m_arbiter.bank_idle(bank) ) {
-          m_arbiter.allocate_bank_for_write(bank,op_t(&inst,reg,m_num_banks,m_bank_warp_shift));
-      } else {
-          return false;
-      }
-   }
+    assert( !inst.empty() );
+    std::list<unsigned> regs = m_shader->get_regs_written(inst);
+    std::list<unsigned>::iterator r;
+    std::vector<unsigned> regsToWrite;
+    for( r=regs.begin(); r!=regs.end();r++ ) {
+        unsigned reg = *r;
+        //RFC_PRINTF2("opndcoll_rfu::writeback():warp=%d,reg=%d\n",inst.warp_id(),reg);
+        if(m_rf_cache->Enabled()) {
+            if(!m_rf_cache->IsCached(inst.warp_id(), reg, /*markUsed*/ true, /* logWrite */ false, /* logRead */ true)) {
+                if(0 == m_rf_cache->EmptyLineCount(inst.warp_id())) {
+                    regsToWrite.push_back(m_rf_cache->Evict(inst.warp_id()));
+                }
+                m_rf_cache->Insert(inst.warp_id(), reg);
+            }
+        } else {// No RFC
+            regsToWrite.push_back(reg);
+        }
+    }
+    for(std::vector<unsigned>::iterator vri = regsToWrite.begin(); vri != regsToWrite.end(); ++vri) {
+        unsigned reg_w = *vri;
+        // Mark write bank as used
+        unsigned bank = register_bank(reg_w,inst.warp_id(),m_num_banks,m_bank_warp_shift);
+        if( m_arbiter.bank_idle(bank) ) {
+            m_arbiter.allocate_bank_for_write(bank,op_t(&inst,reg_w,m_num_banks,m_bank_warp_shift));
+        } else {
+            RFC_PRINTF1("OpndColl Writeback Bank Conflict to bank %u\n",bank);
+        }
+        // Increment the regfile write counter
+        m_shader->incregfile_writes(m_shader->get_config()->warp_size);//inst.active_count());
+    }
+/*
    for(unsigned i=0;i<(unsigned)regs.size();i++){
 	      if(m_shader->get_config()->gpgpu_clock_gated_reg_file){
 	    	  unsigned active_count=0;
@@ -3080,6 +3093,7 @@ bool opndcoll_rfu_t::writeback( const warp_inst_t &inst )
 	    	  m_shader->incregfile_writes(m_shader->get_config()->warp_size);//inst.active_count());
 	      }
    }
+*/
    return true;
 }
 
