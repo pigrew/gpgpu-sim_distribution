@@ -316,6 +316,7 @@ protected:
     friend class data_cache;
     friend class l1_cache;
     friend class l2_cache;
+    friend class rf_cache;
 };
 
 class l1d_cache_config : public cache_config{

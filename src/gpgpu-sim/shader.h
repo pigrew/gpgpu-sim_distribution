@@ -41,6 +41,7 @@
 #include <utility>
 #include <algorithm>
 #include <deque>
+#include <memory>
 
 //#include "../cuda-sim/ptx.tab.h"
 
@@ -53,7 +54,7 @@
 #include "stats.h"
 #include "gpu-cache.h"
 #include "traffic_breakdown.h"
-
+#include "rf-cache.hpp"
 
 
 #define NO_OP_FLAG            0xFF
@@ -139,7 +140,7 @@ public:
     bool hardware_done() const;
 
     bool done_exit() const { return m_done_exit; }
-    void set_done_exit() { m_done_exit=true; }
+    void set_done_exit();
 
     void print( FILE *fout ) const;
     void print_ibuffer( FILE *fout ) const;
@@ -1262,6 +1263,7 @@ struct shader_core_config : public core_config
         m_L1T_config.init(m_L1T_config.m_config_string,FuncCachePreferNone);
         m_L1C_config.init(m_L1C_config.m_config_string,FuncCachePreferNone);
         m_L1D_config.init(m_L1D_config.m_config_string,FuncCachePreferNone);
+        m_rfc_config.init(m_rfc_config.m_config_string,FuncCachePreferNone);
         gpgpu_cache_texl1_linesize = m_L1T_config.get_line_sz();
         gpgpu_cache_constl1_linesize = m_L1C_config.get_line_sz();
         m_valid = true;
@@ -1288,7 +1290,7 @@ struct shader_core_config : public core_config
 
     char* pipeline_widths_string;
     int pipe_widths[N_PIPELINE_STAGES];
-
+    mutable cache_config m_rfc_config;
     mutable cache_config m_L1I_config;
     mutable cache_config m_L1T_config;
     mutable cache_config m_L1C_config;
@@ -1828,7 +1830,7 @@ public:
     std::vector<register_set> m_pipeline_reg;
     Scoreboard               *m_scoreboard;
     opndcoll_rfu_t            m_operand_collector;
-
+    std::unique_ptr<rf_cache> m_rf_cache;
     //schedule
     std::vector<scheduler_unit*>  schedulers;
 

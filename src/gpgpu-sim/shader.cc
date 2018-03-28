@@ -51,7 +51,10 @@
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define MIN(a,b) (((a)<(b))?(a):(b))
     
-
+#define RFC_PRINTF(a) (printf("RFC(%s): " a,__FUNCTION__))
+#define RFC_PRINTF1(a,b) (printf("RFC(%s): " a,__FUNCTION__,b))
+#define RFC_PRINTF2(a,b,c) (printf("RFC(%s): " a,__UNCTION__,b,c))
+#define RFC_PRINTF3(a,b,c,d) (printf("RFC(%s): " a,__PRETTY_FUNCTION__,b,c,d))
 /////////////////////////////////////////////////////////////////////////////
 
 std::list<unsigned> shader_core_ctx::get_regs_written( const inst_t &fvt ) const
@@ -121,6 +124,12 @@ shader_core_ctx::shader_core_ctx( class gpgpu_sim *gpu,
     
     m_warp.resize(m_config->max_warps_per_shader, shd_warp_t(this, warp_size));
     m_scoreboard = new Scoreboard(m_sid, m_config->max_warps_per_shader);
+    
+    // Initialize register file cache
+    snprintf(name, STRSIZE, "RFC_%03d", m_sid);
+    m_rf_cache = std::unique_ptr<rf_cache>(
+        new rf_cache(name,m_config->m_rfc_config,m_sid,get_shader_register_cache_id(), m_icnt, IN_L1I_MISS_QUEUE, config->max_warps_per_shader )
+    );
     
     //scedulers
     //must currently occur after all inputs have been initialized.
@@ -644,8 +653,14 @@ void shader_core_ctx::fetch()
                             did_exit=true;
                         }
                     }
-                    if( did_exit ) 
+                    if( did_exit ) {
                         m_warp[warp_id].set_done_exit();
+                        // empty register file cache (if enabled)
+                        // Assumed to take no cycles (roughly....)
+                        if(m_rf_cache->Enabled()) {
+                           m_rf_cache->FreeWarpCache(warp_id); 
+                        }
+                    }
                 }
 
                 // this code fetches instructions from the i-cache or generates memory requests
@@ -691,7 +706,11 @@ void shader_core_ctx::fetch()
 
     m_L1I->cycle();
 }
-
+void shd_warp_t::set_done_exit()
+{
+    RFC_PRINTF1("Setting warp %d done exit\n",get_warp_id());
+    m_done_exit=true; 
+}
 void shader_core_ctx::func_exec_inst( warp_inst_t &inst )
 {
     execute_warp_inst_t(inst);
@@ -1302,7 +1321,6 @@ void shader_core_ctx::writeback()
     	 * To handle this case, we ignore the return value (thus allowing
     	 * no stalling).
     	 */
-
         m_operand_collector.writeback(*pipe_reg);
         unsigned warp_id = pipe_reg->warp_id();
         m_scoreboard->releaseRegisters( pipe_reg );
@@ -3025,6 +3043,7 @@ int register_bank(int regnum, int wid, unsigned num_banks, unsigned bank_warp_sh
 
 bool opndcoll_rfu_t::writeback( const warp_inst_t &inst )
 {
+   RFC_PRINTF("opndcoll_rfu::writeback()\n");
    assert( !inst.empty() );
    std::list<unsigned> regs = m_shader->get_regs_written(inst);
    std::list<unsigned>::iterator r;
@@ -3032,6 +3051,8 @@ bool opndcoll_rfu_t::writeback( const warp_inst_t &inst )
    for( r=regs.begin(); r!=regs.end();r++,n++ ) {
       unsigned reg = *r;
       unsigned bank = register_bank(reg,inst.warp_id(),m_num_banks,m_bank_warp_shift);
+      RFC_PRINTF3("opndcoll_rfu::writeback():warp=%d,reg=%d,bank=%d\n",inst.warp_id(),reg,bank);
+      
       if( m_arbiter.bank_idle(bank) ) {
           m_arbiter.allocate_bank_for_write(bank,op_t(&inst,reg,m_num_banks,m_bank_warp_shift));
       } else {
