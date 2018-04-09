@@ -2543,6 +2543,8 @@ void shader_core_ctx::cache_flush()
 std::list<opndcoll_rfu_t::op_t> opndcoll_rfu_t::arbiter_t::allocate_reads() 
 {
    std::list<op_t> result;  // a list of registers that (a) are in different register banks, (b) do not go to the same operand collector
+   
+   // If RFC is enabled, then mark the cached registers as having been read (too)
 
    int input;
    int output;
@@ -2559,6 +2561,7 @@ std::list<opndcoll_rfu_t::op_t> opndcoll_rfu_t::arbiter_t::allocate_reads()
       _outmatch[j] = -1;
 
    for( unsigned i=0; i<m_num_banks; i++) {
+      // Clear Requests
       for( unsigned j=0; j<m_num_collectors; j++) {
          assert( i < (unsigned)_inputs );
          assert( j < (unsigned)_outputs );
@@ -3150,8 +3153,9 @@ void opndcoll_rfu_t::allocate_cu( unsigned port_num )
 
 void opndcoll_rfu_t::allocate_reads()
 {
-   // process read requests that do not have conflicts
+   // Find reads that are possible
    std::list<op_t> allocated = m_arbiter.allocate_reads();
+   // process read requests that do not have conflicts
    std::map<unsigned,op_t> read_ops;
    for( std::list<op_t>::iterator r=allocated.begin(); r!=allocated.end(); r++ ) {
       const op_t &rr = *r;
