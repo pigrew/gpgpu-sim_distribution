@@ -1831,7 +1831,7 @@ public:
     std::vector<register_set> m_pipeline_reg;
     Scoreboard               *m_scoreboard;
     opndcoll_rfu_t            m_operand_collector;
-    std::shared_ptr<rf_cache> m_rf_cache;
+    public: std::shared_ptr<rf_cache> m_rf_cache;
     //schedule
     std::vector<scheduler_unit*>  schedulers;
 
@@ -1879,7 +1879,7 @@ public:
                        const struct memory_config *mem_config,
                        shader_core_stats *stats,
                        memory_stats_t *mstats );
-
+    void print_rfc_stats();
     void core_cycle();
     void icnt_cycle();
 
@@ -1921,9 +1921,9 @@ private:
     unsigned m_cluster_id;
     gpgpu_sim *m_gpu;
     const shader_core_config *m_config;
-    shader_core_stats *m_stats;
+    public:shader_core_stats *m_stats;
     memory_stats_t *m_memory_stats;
-    shader_core_ctx **m_core;
+    public:shader_core_ctx **m_core;
 
     unsigned m_cta_issue_next_core;
     std::list<unsigned> m_core_sim_order;

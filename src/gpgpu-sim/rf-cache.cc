@@ -8,6 +8,7 @@
 // It is always fully associative
 
 rf_cache::~rf_cache() {
+    printf("RFC: Destructing core=%d\n",m_core_id);
     delete m_cachedRows;
 }
 rf_cache::rf_cache(
@@ -27,7 +28,7 @@ bool rf_cache::Enabled() const {
     return (m_config.m_nset) > 0;
 }
 void rf_cache::Insert(int warp_id, int reg_id) {
-    printf("Inserting new RFC entry core=%2d warp=%d, reg=%d\n",m_core_id, warp_id,reg_id);
+    //printf("Inserting new RFC entry core=%2d warp=%d, reg=%d\n",m_core_id, warp_id,reg_id);
     for(unsigned int i=0; i<m_config.m_nset; i++) {
         int n = warp_id * m_config.m_nset + i;
         if(m_cachedRows[n] == -1) {
@@ -39,12 +40,19 @@ void rf_cache::Insert(int warp_id, int reg_id) {
     assert(NULL == "No empty RFC lines found for use");
 }
 void rf_cache::FreeWarpCache(int warp_id) {
-    printf("RFC: Empty Cache; core=%d warp=%d\n",m_core_id, warp_id);
+    //printf("RFC: Empty Cache; core=%d warp=%d\n",m_core_id, warp_id);
     for(unsigned int i=0; i<m_config.m_nset; i++) {
         m_cachedRows[warp_id*m_config.m_nset + i] = -1;
     }
 }
+static void printArrayLine(int *array, int n) {
+    for(int i=0; i<n; i++) {
+        printf("%d,",array[i]);
+    }
+    printf("\n");
+}
 bool rf_cache::IsCached(int warp_id, int reg_id, bool markUsed, bool logWriteHit, bool logReadHit) {
+    //printf("IsCached(warp_id=%d, reg_id=%d, markUsed=%d,logWriteHit=%d,logReadHit=%d\n",warp_id, reg_id,markUsed,logWriteHit,logReadHit);
     unsigned base_ix = warp_id*m_config.m_nset;
     for(unsigned int i=0; i<m_config.m_nset; i++) {
         if(m_cachedRows[base_ix + i] == reg_id) {
@@ -55,10 +63,13 @@ bool rf_cache::IsCached(int warp_id, int reg_id, bool markUsed, bool logWriteHit
                 m_writeCount++;
             }
             if(markUsed && (m_config.m_replacement_policy == LRU)) {
-                for(int j=i; j>0; j--) {
-                    m_cachedRows[base_ix + j] = m_cachedRows[base_ix+j-1];
+                unsigned int j;
+                //printf("Was: "); printArrayLine(&m_cachedRows[base_ix],m_config.m_nset);
+                for(j=i; (j<m_config.m_nset-1) && (m_cachedRows[base_ix+j+1] != -1); j++) {
+                    m_cachedRows[base_ix + j] = m_cachedRows[base_ix+j+1];
                 }
-                m_cachedRows[base_ix] = reg_id;
+                m_cachedRows[base_ix+j] = reg_id;
+                //printf("New: "); printArrayLine(&m_cachedRows[base_ix],m_config.m_nset);
             } 
             return true;
         }
@@ -80,13 +91,16 @@ int rf_cache::Evict(int warp_id) {
     int n = warp_id * m_config.m_nset;
     int registerToEvict = m_cachedRows[n];
     assert(registerToEvict != -1);
-    printf("RFC: Evicting core=%2d warp=%d, reg=%d\n", m_core_id, warp_id, m_cachedRows[n]);
+    //printf("RFC: Evicting core=%2d warp=%d, reg=%d\n", m_core_id, warp_id, m_cachedRows[n]);
     m_cachedRows[n] = -1;
     m_evictCount++;
-    int i=0;
-    for(unsigned i=0; i<m_config.m_nset-1; i++) {
+    unsigned int i=0;
+    for(i=0; i<m_config.m_nset-1; i++) {
         m_cachedRows[n+i] = m_cachedRows[n+i+1];   
     }
     m_cachedRows[n+i] = -1;
     return registerToEvict;
+}
+void rf_cache::PrintStats() {
+    printf("RFC: core=%2d readHits=%ld writeHits=%ld evicts=%ld inserts=%ld\n", m_core_id, m_readHitCount, m_writeCount, m_evictCount,m_insertCount);
 }

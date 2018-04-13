@@ -1066,7 +1066,24 @@ void gpgpu_sim::gpu_print_stat()
    }
    printf("\nicnt_total_pkts_mem_to_simt=%ld\n", total_mem_to_simt);
    printf("icnt_total_pkts_simt_to_mem=%ld\n", total_simt_to_mem);
-
+   long  insertCount=0, writeCount=0, evictCount=0, readHitCount=0;
+    long regReads=0, regWrites=0;
+int z  =0;
+   for(unsigned i=0; i<m_config.num_cluster(); i++){
+        for(unsigned j=0; j<m_config.m_shader_config.n_simt_cores_per_cluster; j++){
+            if(m_cluster[i]->m_core[j]->m_rf_cache->Enabled()){
+                insertCount += m_cluster[i]->m_core[j]->m_rf_cache->m_insertCount;
+                writeCount += m_cluster[i]->m_core[j]->m_rf_cache->m_writeCount;
+                evictCount += m_cluster[i]->m_core[j]->m_rf_cache->m_evictCount;
+                readHitCount+=m_cluster[i]->m_core[j]->m_rf_cache->m_readHitCount;
+            }
+            regReads += m_cluster[i]->m_stats->m_read_regfile_acesses[z];
+            regWrites +=   m_cluster[i]->m_stats->m_write_regfile_acesses[z];
+            z++;
+        }
+    }
+    printf("RFC: readHits=%ld writeHits=%ld evicts=%ld inserts=%ld\n",32*readHitCount, 32*writeCount, 32*evictCount,32*insertCount); 
+    printf("REGFILE: read=%ld write=%ld\n",regReads, regWrites);
    time_vector_print();
    fflush(stdout);
 

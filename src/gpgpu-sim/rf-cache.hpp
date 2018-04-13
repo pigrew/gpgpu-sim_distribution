@@ -17,11 +17,12 @@ class rf_cache : public read_only_cache {
         //   Increment the eviction counter
         //   Returns register number that was evicted
         int Evict(int warp_id);
+        void PrintStats();
     protected:
         int m_core_id;
         int m_maxWarps;
         int* m_cachedRows;
         // Statistics:
-        long m_insertCount, m_writeCount, m_evictCount, m_readHitCount;
+    public:    long m_insertCount, m_writeCount, m_evictCount, m_readHitCount;
 };
 #endif // RF_CACHE_H

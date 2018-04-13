@@ -57,6 +57,7 @@
 #define RFC_PRINTF1(a,b) (printf("RFC(%s): " a,__FUNCTION__,b))
 #define RFC_PRINTF2(a,b,c) (printf("RFC(%s): " a,__FUNCTION__,b,c))
 #define RFC_PRINTF3(a,b,c,d) (printf("RFC(%s): " a,__FUNCTION__,b,c,d))
+#define RFC_PRINTF4(a,b,c,d,e) (printf("RFC(%s): " a,__FUNCTION__,b,c,d,e))
 /////////////////////////////////////////////////////////////////////////////
 
 std::list<unsigned> shader_core_ctx::get_regs_written( const inst_t &fvt ) const
@@ -710,7 +711,7 @@ void shader_core_ctx::fetch()
 }
 void shd_warp_t::set_done_exit()
 {
-    RFC_PRINTF1("Setting warp %d done exit\n",get_warp_id());
+    //RFC_PRINTF1("Setting warp %d done exit\n",get_warp_id());
     m_done_exit=true; 
 }
 void shader_core_ctx::func_exec_inst( warp_inst_t &inst )
@@ -2084,7 +2085,6 @@ void gpgpu_sim::shader_print_scheduler_stat( FILE* fout, bool print_dynamic_info
 }
 
 void gpgpu_sim::shader_print_cache_stats( FILE *fout ) const{
-
     // L1I
     struct cache_sub_stats total_css;
     struct cache_sub_stats css;
@@ -3055,9 +3055,9 @@ bool opndcoll_rfu_t::writeback( const warp_inst_t &inst )
     std::vector<unsigned> regsToWrite;
     for( r=regs.begin(); r!=regs.end();r++ ) {
         unsigned reg = *r;
-        //RFC_PRINTF2("opndcoll_rfu::writeback():warp=%d,reg=%d\n",inst.warp_id(),reg);
+        //RFC_PRINTF3("opndcoll_rfu::writeback():uid=%ud,warp=%d,reg=%d\n",inst.get_uid(),inst.warp_id(),reg);
         if(m_rf_cache->Enabled()) {
-            if(!m_rf_cache->IsCached(inst.warp_id(), reg, /*markUsed*/ true, /* logWrite */ false, /* logRead */ true)) {
+            if(!m_rf_cache->IsCached(inst.warp_id(), reg, /*markUsed*/ true, /* logWrite */ true, /* logRead */ false)) {
                 if(0 == m_rf_cache->EmptyLineCount(inst.warp_id())) {
                     regsToWrite.push_back(m_rf_cache->Evict(inst.warp_id()));
                 }
@@ -3074,7 +3074,7 @@ bool opndcoll_rfu_t::writeback( const warp_inst_t &inst )
         if( m_arbiter.bank_idle(bank) ) {
             m_arbiter.allocate_bank_for_write(bank,op_t(&inst,reg_w,m_num_banks,m_bank_warp_shift));
         } else {
-            RFC_PRINTF1("OpndColl Writeback Bank Conflict to bank %u\n",bank);
+            RFC_PRINTF4("OpndColl Writeback Bank Conflict to bank %u, uid=%ud, warp=%d, reg=%d\n",bank,inst.get_uid(),inst.warp_id(), reg_w);
         }
         // Increment the regfile write counter
         m_shader->incregfile_writes(m_shader->get_config()->warp_size);//inst.active_count());
@@ -3171,21 +3171,25 @@ void opndcoll_rfu_t::allocate_reads()
       unsigned cu = op.get_oc_id();
       unsigned operand = op.get_operand();
       m_cu[cu]->collect_operand(operand);
-      if(m_shader->get_config()->gpgpu_clock_gated_reg_file){
-    	  unsigned active_count=0;
-    	  for(unsigned i=0;i<m_shader->get_config()->warp_size;i=i+m_shader->get_config()->n_regfile_gating_group){
-    		  for(unsigned j=0;j<m_shader->get_config()->n_regfile_gating_group;j++){
-    			  if(op.get_active_mask().test(i+j)){
-    				  active_count+=m_shader->get_config()->n_regfile_gating_group;
-    				  break;
-    			  }
-    		  }
-    	  }
-    	  m_shader->incregfile_reads(active_count);
-      }else{
-    	  m_shader->incregfile_reads(m_shader->get_config()->warp_size);//op.get_active_count());
+      if(m_rf_cache->Enabled() &&
+         m_rf_cache->IsCached(op.get_wid(), op.get_reg(),true,false,true)) {
+      } else {
+            if(m_shader->get_config()->gpgpu_clock_gated_reg_file){
+    	        unsigned active_count=0;
+    	        for(unsigned i=0;i<m_shader->get_config()->warp_size;i=i+m_shader->get_config()->n_regfile_gating_group){
+    	            for(unsigned j=0;j<m_shader->get_config()->n_regfile_gating_group;j++){
+    			        if(op.get_active_mask().test(i+j)){
+    				        active_count+=m_shader->get_config()->n_regfile_gating_group;
+    				        break;
+    			        }
+    		        }
+    	        }
+    	        m_shader->incregfile_reads(active_count);
+            } else {
+    	        m_shader->incregfile_reads(m_shader->get_config()->warp_size);//op.get_active_count());
+            }
       }
-  }
+   }
 } 
 
 bool opndcoll_rfu_t::collector_unit_t::ready() const 
@@ -3276,6 +3280,25 @@ simt_core_cluster::simt_core_cluster( class gpgpu_sim *gpu,
         m_core[i] = new shader_core_ctx(gpu,this,sid,m_cluster_id,config,mem_config,stats);
         m_core_sim_order.push_back(i); 
     }
+}
+void simt_core_cluster::print_rfc_stats() {
+   long  insertCount=0, writeCount=0, evictCount=0, readHitCount=0;
+   for(unsigned i=0; i<m_config->n_simt_cores_per_cluster; i++){
+        if(m_core[i]->m_rf_cache->Enabled()){
+            insertCount += m_core[i]->m_rf_cache->m_insertCount;
+            writeCount += m_core[i]->m_rf_cache->m_writeCount;
+            evictCount += m_core[i]->m_rf_cache->m_evictCount;
+            readHitCount+=m_core[i]->m_rf_cache->m_readHitCount;
+            //m_core[i]->m_rf_cache->PrintStats();
+        }
+   }
+   long regReads=0, regWrites=0;
+   for(unsigned i=0; i<m_config->num_shader(); i++) {
+        regReads += m_stats->m_read_regfile_acesses[i];
+        regWrites +=  m_stats->m_write_regfile_acesses[i];
+    }
+   printf("RFC[%d]: readHits=%ld writeHits=%ld evicts=%ld inserts=%ld\n", m_cluster_id, 32*readHitCount, 32*writeCount, 32*evictCount,32*insertCount);
+   printf("REGFILE[%d]: read=%ld write=%ld\n",m_cluster_id,regReads, regWrites);
 }
 
 void simt_core_cluster::core_cycle()
