@@ -143,7 +143,7 @@ no_opencl_support:
 	@echo "Warning: gpgpu-sim is building without opencl support. Make sure NVOPENCL_LIBDIR and NVOPENCL_INCDIR are set"
 
 $(SIM_LIB_DIR)/libcudart.so: makedirs $(LIBS) cudalib
-	g++ -shared -Wl,-soname,libcudart_$(GPGPUSIM_BUILD).so -Wl,--version-script=linux-so-version.txt\
+	$(CXX) $(LDFLAGS) -shared -Wl,-soname,libcudart_$(GPGPUSIM_BUILD).so -Wl,--version-script=linux-so-version.txt \
 			$(SIM_OBJ_FILES_DIR)/libcuda/*.o \
 			$(SIM_OBJ_FILES_DIR)/cuda-sim/*.o \
 			$(SIM_OBJ_FILES_DIR)/cuda-sim/decuda_pred_table/*.o \
@@ -151,7 +151,9 @@ $(SIM_LIB_DIR)/libcudart.so: makedirs $(LIBS) cudalib
 			$(SIM_OBJ_FILES_DIR)/$(INTERSIM)/*.o \
 			$(SIM_OBJ_FILES_DIR)/*.o -lm -lz -lGL -pthread \
 			$(MCPAT) \
-			-o $(SIM_LIB_DIR)/libcudart.so
+			-o $(SIM_LIB_DIR)/libcudart_$(GPGPUSIM_BUILD).so
+	rm -f $(SIM_LIB_DIR)/libcudart.so
+	ln -s libcudart_$(GPGPUSIM_BUILD).so $(SIM_LIB_DIR)/libcudart.so
 	if [ ! -f $(SIM_LIB_DIR)/libcudart.so.2 ]; then ln -s libcudart.so $(SIM_LIB_DIR)/libcudart.so.2; fi
 	if [ ! -f $(SIM_LIB_DIR)/libcudart.so.3 ]; then ln -s libcudart.so $(SIM_LIB_DIR)/libcudart.so.3; fi
 	if [ ! -f $(SIM_LIB_DIR)/libcudart.so.4 ]; then ln -s libcudart.so $(SIM_LIB_DIR)/libcudart.so.4; fi
@@ -165,7 +167,7 @@ $(SIM_LIB_DIR)/libcudart.so: makedirs $(LIBS) cudalib
 	if [ ! -f $(SIM_LIB_DIR)/libcudart.so.9.1 ]; then ln -s libcudart.so $(SIM_LIB_DIR)/libcudart.so.9.1; fi
 
 $(SIM_LIB_DIR)/libcudart.dylib: makedirs $(LIBS) cudalib
-	g++ -dynamiclib -Wl,-headerpad_max_install_names,-undefined,dynamic_lookup,-compatibility_version,1.1,-current_version,1.1\
+	$(CXX) -dynamiclib -Wl,-headerpad_max_install_names,-undefined,dynamic_lookup,-compatibility_version,1.1,-current_version,1.1\
 			$(SIM_OBJ_FILES_DIR)/libcuda/*.o \
 			$(SIM_OBJ_FILES_DIR)/cuda-sim/*.o \
 			$(SIM_OBJ_FILES_DIR)/cuda-sim/decuda_pred_table/*.o \
@@ -176,7 +178,7 @@ $(SIM_LIB_DIR)/libcudart.dylib: makedirs $(LIBS) cudalib
 			-o $(SIM_LIB_DIR)/libcudart.dylib
 
 $(SIM_LIB_DIR)/libOpenCL.so: makedirs $(LIBS) opencllib
-	g++ -shared -Wl,-soname,libOpenCL_$(GPGPUSIM_BUILD).so \
+	$(XX) -shared -Wl,-soname,libOpenCL_$(GPGPUSIM_BUILD).so \
 			$(SIM_OBJ_FILES_DIR)/libopencl/*.o \
 			$(SIM_OBJ_FILES_DIR)/cuda-sim/*.o \
 			$(SIM_OBJ_FILES_DIR)/cuda-sim/decuda_pred_table/*.o \
