@@ -66,8 +66,6 @@ ifeq ($(OPENGL_SUPPORT),1)
 	GL = -DOPENGL_SUPPORT
 endif
 
-CXX = g++
-CC = gcc
 CREATELIBRARY    =  1
 DEBUG ?= 0
 CCFLAGS = -O3 -g -Wall -fPIC $(GL)
