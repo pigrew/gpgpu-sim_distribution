@@ -682,21 +682,25 @@ private:
          m_allocator_rr_head=NULL;
          _inmatch=NULL;
          _outmatch=NULL;
-         _request=NULL;
+         //_request=NULL;
          m_last_cu=0;
       }
-      void init( unsigned num_cu, unsigned num_banks ) 
+      void init( unsigned num_cu, unsigned num_banks, unsigned num_preg_banks, unsigned num_preg_regs ) 
       { 
          assert(num_cu > 0);
          assert(num_banks > 0);
          m_num_collectors = num_cu;
          m_num_banks = num_banks;
+         m_num_preg_banks = num_preg_banks;
+         m_num_preg_regs = num_preg_regs;
          _inmatch = new int[ m_num_banks ];
          _outmatch = new int[ m_num_collectors ];
          _request = new int*[ m_num_banks ];
          for(unsigned i=0; i<m_num_banks;i++) 
              _request[i] = new int[m_num_collectors];
          m_queue = new std::list<op_t>[num_banks];
+         m_preg_queue = new std::list<op_t>[num_preg_banks];
+         m_preg_usage.resize(num_preg_banks);
          m_allocated_bank = new allocation_t[num_banks];
          m_allocator_rr_head = new unsigned[num_cu];
          for( unsigned n=0; n<num_cu;n++ ) 
@@ -735,8 +739,12 @@ private:
          for( unsigned i=0; i<MAX_REG_OPERANDS*2; i++) {
             const op_t &op = src[i];
             if( op.valid() ) {
-               unsigned bank = op.get_bank();
-               m_queue[bank].push_back(op);
+                unsigned bank = op.get_bank();
+                if(op.get_reg() < m_num_preg_regs) {
+                    m_preg_queue[op.get_wid() % m_num_preg_banks].push_back(op);
+                } else {
+                    m_queue[bank].push_back(op);
+                }
             }
          }
       }
@@ -758,15 +766,19 @@ private:
       {
          for( unsigned b=0; b < m_num_banks; b++ ) 
             m_allocated_bank[b].reset();
+         for(unsigned b=0; b < m_num_preg_banks; b++)
+            m_preg_usage[b] = 0;
       }
 
    private:
       unsigned m_num_banks;
+      unsigned m_num_preg_banks, m_num_preg_regs;
       unsigned m_num_collectors;
 
       allocation_t *m_allocated_bank; // bank # -> register that wins
       std::list<op_t> *m_queue;
-
+      std::list<op_t> *m_preg_queue;
+      std::vector<int> m_preg_usage; // Number of allocated reads for each preg bank.
       unsigned *m_allocator_rr_head; // cu # -> next bank to check for request (rr-arb)
       unsigned  m_last_cu; // first cu to check while arb-ing banks (rr)
 

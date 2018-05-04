@@ -2533,13 +2533,29 @@ std::list<opndcoll_rfu_t::op_t> opndcoll_rfu_t::arbiter_t::allocate_reads()
    int _square = ( _inputs > _outputs ) ? _inputs : _outputs;
    assert(_square > 0);
    int _pri = (int)m_last_cu;
-
+    
    // Clear matching
    for ( int i = 0; i < _inputs; ++i ) 
       _inmatch[i] = -1;
    for ( int j = 0; j < _outputs; ++j ) 
       _outmatch[j] = -1;
 
+   // Find PREG read requests to fulfill
+    for( unsigned i=0; i< m_num_preg_banks; i++) {
+        while(m_preg_usage[i] < 2) { // Only two read ports
+            if(m_preg_queue[i].empty())
+                break;
+            op_t &op = m_preg_queue[i].front();
+            if(_outmatch[op.get_oc_id()] != -1) // If CU already in use
+                break;
+            _outmatch[op.get_oc_id()] = -2; // Mark as used by PREF
+            
+            result.push_back(op);
+            m_preg_queue[i].pop_front();
+            m_preg_usage[i]++;
+        }
+    }
+    
    for( unsigned i=0; i<m_num_banks; i++) {
       for( unsigned j=0; j<m_num_collectors; j++) {
          assert( i < (unsigned)_inputs );
@@ -2587,19 +2603,18 @@ std::list<opndcoll_rfu_t::op_t> opndcoll_rfu_t::arbiter_t::allocate_reads()
    _pri = ( _pri + 1 ) % _square;
 
    /// <--- end code from booksim
-
+   
    m_last_cu = _pri;
    for( unsigned i=0; i < m_num_banks; i++ ) {
       if( _inmatch[i] != -1 ) {
          if( !m_allocated_bank[i].is_write() ) {
-            unsigned bank = (unsigned)i;
+            unsigned bank = i;
             op_t &op = m_queue[bank].front();
             result.push_back(op);
             m_queue[bank].pop_front();
          }
       }
    }
-
    return result;
 }
 
@@ -3002,7 +3017,7 @@ void opndcoll_rfu_t::add_port(port_vector_t & input, port_vector_t & output, uin
 void opndcoll_rfu_t::init( unsigned num_banks, shader_core_ctx *shader )
 {
    m_shader=shader;
-   m_arbiter.init(m_cu.size(),num_banks);
+   m_arbiter.init(m_cu.size(),num_banks, shader->get_config()->gpgpu_preg_nbanks, shader->get_config()->gpgpu_preg_nregs);
    //for( unsigned n=0; n<m_num_ports;n++ ) 
    //    m_dispatch_units[m_output[n]].init( m_num_collector_units[n] );
    m_num_banks = num_banks;
@@ -3105,17 +3120,22 @@ void opndcoll_rfu_t::allocate_cu( unsigned port_num )
                         warp_inst_t** inst = inp.m_in[i]->get_ready();
                         for(unsigned op=0; op<MAX_REG_OPERANDS; op++) {
                             int r = (*inst)->arch_reg.src[op];
-                            if( (r >= 0) && (((unsigned)r) < (m_shader->get_config()->gpgpu_preg_nregs)))
+                            //printf("reg=%d\n",r);
+                            if( (r >= 0) && (((unsigned)r) < (m_shader->get_config()->gpgpu_preg_nregs))) {
                                 usesPreg = true;
+                                break;
+                            }
                             r = (*inst)->arch_reg.dst[op];
-                            if( (r >= 0) && (((unsigned)r) < (m_shader->get_config()->gpgpu_preg_nregs)))
+                            if( (r >= 0) && (((unsigned)r) < (m_shader->get_config()->gpgpu_preg_nregs))) {
                                 usesPreg = true;
+                                break;
+                            }
                         }
                         
                         if(usesPreg) {
                             unsigned warp_id = (*inst)->warp_id();
                             if( (warp_id % preg_banks) != (k % preg_banks)) {
-                               printf("PREG: wrong bank, wid=%u\n", warp_id);
+                               //printf("PREG: wrong bank, wid=%u\n", warp_id);
                                continue;
                             }
                         }
@@ -3139,12 +3159,15 @@ void opndcoll_rfu_t::allocate_reads()
    std::list<op_t> allocated = m_arbiter.allocate_reads();
    std::map<unsigned,op_t> read_ops;
    for( std::list<op_t>::iterator r=allocated.begin(); r!=allocated.end(); r++ ) {
-      const op_t &rr = *r;
-      unsigned reg = rr.get_reg();
-      unsigned wid = rr.get_wid();
-      unsigned bank = register_bank(reg,wid,m_num_banks,m_bank_warp_shift);
-      m_arbiter.allocate_for_read(bank,rr);
-      read_ops[bank] = rr;
+        unsigned reg = r->get_reg();
+        unsigned wid = r->get_wid();
+        unsigned bank = register_bank(reg,wid,m_num_banks,m_bank_warp_shift);
+        if (reg < m_shader->get_config()->gpgpu_preg_nregs) {// PREG read
+            m_cu[r->get_oc_id()]->collect_operand(r->get_operand());
+        } else {
+            m_arbiter.allocate_for_read(bank,*r);
+            read_ops[bank] = *r;
+        }
    }
    std::map<unsigned,op_t>::iterator r;
    for(r=read_ops.begin();r!=read_ops.end();++r ) {
