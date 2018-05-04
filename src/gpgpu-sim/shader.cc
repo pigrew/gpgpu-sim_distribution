@@ -3089,14 +3089,37 @@ void opndcoll_rfu_t::dispatch_ready_cu()
 void opndcoll_rfu_t::allocate_cu( unsigned port_num )
 {
    input_port_t& inp = m_in_ports[port_num];
+   unsigned preg_banks = m_shader->get_config()->gpgpu_preg_nbanks;
+   if (m_shader->get_config()->gpgpu_preg_nregs == 0)
+       preg_banks = 0;
    for (unsigned i = 0; i < inp.m_in.size(); i++) {
        if( (*inp.m_in[i]).has_ready() ) {
           //find a free cu 
           for (unsigned j = 0; j < inp.m_cu_sets.size(); j++) {
               std::vector<collector_unit_t> & cu_set = m_cus[inp.m_cu_sets[j]];
-	      bool allocated = false;
+	          bool allocated = false;
               for (unsigned k = 0; k < cu_set.size(); k++) {
                   if(cu_set[k].is_free()) {
+                     if(preg_banks > 0) {
+                        bool usesPreg = false;
+                        warp_inst_t** inst = inp.m_in[i]->get_ready();
+                        for(unsigned op=0; op<MAX_REG_OPERANDS; op++) {
+                            int r = (*inst)->arch_reg.src[op];
+                            if( (r >= 0) && (((unsigned)r) < (m_shader->get_config()->gpgpu_preg_nregs)))
+                                usesPreg = true;
+                            r = (*inst)->arch_reg.dst[op];
+                            if( (r >= 0) && (((unsigned)r) < (m_shader->get_config()->gpgpu_preg_nregs)))
+                                usesPreg = true;
+                        }
+                        
+                        if(usesPreg) {
+                            unsigned warp_id = (*inst)->warp_id();
+                            if( (warp_id % preg_banks) != (k % preg_banks)) {
+                               printf("PREG: wrong bank, wid=%u\n", warp_id);
+                               continue;
+                            }
+                        }
+                     }
                      collector_unit_t *cu = &cu_set[k];
                      allocated = cu->allocate(inp.m_in[i],inp.m_out[i]);
                      m_arbiter.add_read_requests(cu);

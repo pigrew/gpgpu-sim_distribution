@@ -208,6 +208,8 @@ void memory_config::reg_options(class OptionParser * opp)
 
 void shader_core_config::reg_options(class OptionParser * opp)
 {
+    option_parser_register(opp, "-gpgpu_preg_nreg", OPT_UINT32, &gpgpu_preg_nregs, "Count of priority registers per warp", "0");
+    option_parser_register(opp, "-gpgpu_preg_nbanks", OPT_UINT32, &gpgpu_preg_nbanks, "Count of priority registers banks", "2");
     option_parser_register(opp, "-gpgpu_simd_model", OPT_INT32, &model, 
                    "1 = post-dominator", "1");
     option_parser_register(opp, "-gpgpu_shader_core_pipeline", OPT_CSTR, &gpgpu_shader_core_pipeline_opt, 

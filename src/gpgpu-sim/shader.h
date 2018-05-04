@@ -1322,6 +1322,8 @@ struct shader_core_config : public core_config
     int gpgpu_num_mem_units;
 
     //Shader core resources
+    unsigned gpgpu_preg_nregs;
+    unsigned gpgpu_preg_nbanks;
     unsigned gpgpu_shader_registers;
     int gpgpu_warpdistro_shader;
     int gpgpu_warp_issue_shader;
