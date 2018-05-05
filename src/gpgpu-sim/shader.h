@@ -53,8 +53,7 @@
 #include "stats.h"
 #include "gpu-cache.h"
 #include "traffic_breakdown.h"
-
-
+extern unsigned long long gpu_sim_cycle;
 
 #define NO_OP_FLAG            0xFF
 
@@ -685,10 +684,11 @@ private:
          //_request=NULL;
          m_last_cu=0;
       }
-      void init( unsigned num_cu, unsigned num_banks, unsigned num_preg_banks, unsigned num_preg_regs ) 
+      void init( unsigned num_cu, unsigned num_banks, unsigned num_preg_banks, unsigned num_preg_regs, unsigned shader_sid ) 
       { 
          assert(num_cu > 0);
          assert(num_banks > 0);
+         m_shader_sid = shader_sid;
          m_num_collectors = num_cu;
          m_num_banks = num_banks;
          m_num_preg_banks = num_preg_banks;
@@ -741,7 +741,11 @@ private:
             if( op.valid() ) {
                 unsigned bank = op.get_bank();
                 if(op.get_reg() < m_num_preg_regs) {
-                    m_preg_queue[op.get_wid() % m_num_preg_banks].push_back(op);
+                    unsigned pbank = op.get_wid() % m_num_preg_banks;
+                    m_preg_queue[pbank].push_back(op);
+                    printf("%9llu add_read_requests:           Queue warp=%2u/%3d, reg=%3d, pbank=%3u, queueSize=%3zu, i=%u\n",
+                        gpu_sim_cycle, m_shader_sid, op.get_wid(), op.get_reg(), pbank,
+                        m_preg_queue[pbank].size(), i);
                 } else {
                     m_queue[bank].push_back(op);
                 }
@@ -771,6 +775,7 @@ private:
       }
 
    private:
+      unsigned m_shader_sid; 
       unsigned m_num_banks;
       unsigned m_num_preg_banks, m_num_preg_regs;
       unsigned m_num_collectors;
