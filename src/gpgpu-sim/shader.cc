@@ -2542,7 +2542,7 @@ std::list<opndcoll_rfu_t::op_t> opndcoll_rfu_t::arbiter_t::allocate_reads()
 
    // Find PREG read requests to fulfill
     for( unsigned i=0; i< m_num_preg_banks; i++) {
-        while(m_preg_usage[i] < 2) { // Only two read ports
+        while(m_preg_usage[i] < m_num_preg_readports) { // Only two read ports
             if(m_preg_queue[i].empty())
                 break;
             op_t &op = m_preg_queue[i].front();
@@ -3020,7 +3020,8 @@ void opndcoll_rfu_t::add_port(port_vector_t & input, port_vector_t & output, uin
 void opndcoll_rfu_t::init( unsigned num_banks, shader_core_ctx *shader )
 {
    m_shader=shader;
-   m_arbiter.init(m_cu.size(),num_banks, shader->get_config()->gpgpu_preg_nbanks, shader->get_config()->gpgpu_preg_nregs, shader->get_sid());
+   m_arbiter.init(m_cu.size(),num_banks, shader->get_config()->gpgpu_preg_nbanks, shader->get_config()->gpgpu_preg_nregs, 
+                  shader->get_config()->gpgpu_preg_readports, shader->get_sid());
    //for( unsigned n=0; n<m_num_ports;n++ ) 
    //    m_dispatch_units[m_output[n]].init( m_num_collector_units[n] );
    m_num_banks = num_banks;

@@ -684,7 +684,7 @@ private:
          //_request=NULL;
          m_last_cu=0;
       }
-      void init( unsigned num_cu, unsigned num_banks, unsigned num_preg_banks, unsigned num_preg_regs, unsigned shader_sid ) 
+      void init( unsigned num_cu, unsigned num_banks, unsigned num_preg_banks, unsigned num_preg_regs, unsigned num_preg_readports, unsigned shader_sid ) 
       { 
          assert(num_cu > 0);
          assert(num_banks > 0);
@@ -693,6 +693,7 @@ private:
          m_num_banks = num_banks;
          m_num_preg_banks = num_preg_banks;
          m_num_preg_regs = num_preg_regs;
+         m_num_preg_readports = num_preg_readports;
          _inmatch = new int[ m_num_banks ];
          _outmatch = new int[ m_num_collectors ];
          _request = new int*[ m_num_banks ];
@@ -740,7 +741,7 @@ private:
             const op_t &op = src[i];
             if( op.valid() ) {
                 unsigned bank = op.get_bank();
-                if(op.get_reg() < m_num_preg_regs) {
+                if(m_num_preg_banks > 0 && op.get_reg() < m_num_preg_regs) {
                     unsigned pbank = op.get_wid() % m_num_preg_banks;
                     m_preg_queue[pbank].push_back(op);
                     printf("%9llu add_read_requests:           Queue warp=%2u/%3d, reg=%3d, pbank=%3u, queueSize=%3zu, i=%u\n",
@@ -777,13 +778,13 @@ private:
    private:
       unsigned m_shader_sid; 
       unsigned m_num_banks;
-      unsigned m_num_preg_banks, m_num_preg_regs;
+      unsigned m_num_preg_banks, m_num_preg_regs, m_num_preg_readports;
       unsigned m_num_collectors;
 
       allocation_t *m_allocated_bank; // bank # -> register that wins
       std::list<op_t> *m_queue;
       std::list<op_t> *m_preg_queue;
-      std::vector<int> m_preg_usage; // Number of allocated reads for each preg bank.
+      std::vector<unsigned> m_preg_usage; // Number of allocated reads for each preg bank.
       unsigned *m_allocator_rr_head; // cu # -> next bank to check for request (rr-arb)
       unsigned  m_last_cu; // first cu to check while arb-ing banks (rr)
 
@@ -1341,6 +1342,7 @@ struct shader_core_config : public core_config
     //Shader core resources
     unsigned gpgpu_preg_nregs;
     unsigned gpgpu_preg_nbanks;
+    unsigned gpgpu_preg_readports;
     unsigned gpgpu_shader_registers;
     int gpgpu_warpdistro_shader;
     int gpgpu_warp_issue_shader;
