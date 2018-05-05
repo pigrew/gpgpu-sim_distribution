@@ -741,12 +741,12 @@ private:
             const op_t &op = src[i];
             if( op.valid() ) {
                 unsigned bank = op.get_bank();
-                if(m_num_preg_banks > 0 && op.get_reg() < m_num_preg_regs) {
+                if((m_num_preg_banks > 0 && m_num_preg_regs>0) && (op.get_reg() > 0) &&  (op.get_reg() <= m_num_preg_regs)) {
                     unsigned pbank = op.get_wid() % m_num_preg_banks;
                     m_preg_queue[pbank].push_back(op);
-                    printf("%9llu add_read_requests:           Queue warp=%2u/%3d, reg=%3d, pbank=%3u, queueSize=%3zu, i=%u\n",
-                        gpu_sim_cycle, m_shader_sid, op.get_wid(), op.get_reg(), pbank,
-                        m_preg_queue[pbank].size(), i);
+                    //printf("%9llu add_read_requests:           Queue warp=%2u/%3d, reg=%3d, pbank=%3u, queueSize=%3zu, i=%u\n",
+                      //  gpu_sim_cycle, m_shader_sid, op.get_wid(), op.get_reg(), pbank,
+                       // m_preg_queue[pbank].size(), i);
                 } else {
                     m_queue[bank].push_back(op);
                 }

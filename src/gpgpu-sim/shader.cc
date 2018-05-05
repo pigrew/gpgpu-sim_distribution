@@ -2552,9 +2552,9 @@ std::list<opndcoll_rfu_t::op_t> opndcoll_rfu_t::arbiter_t::allocate_reads()
             
             result.push_back(op);
             m_preg_queue[i].pop_front();
-            unsigned pbank = op.get_wid() % m_num_preg_banks;
-            printf("%9llu arbiter_t::allocate_reads(): Queue warp=%2u/%3d, reg=%3d, pbank=%3u, queueSize=%3zu\n",
-                gpu_sim_cycle, m_shader_sid, op.get_wid(), op.get_reg(), pbank, m_preg_queue[pbank].size());
+            //unsigned pbank = op.get_wid() % m_num_preg_banks;
+            //printf("%9llu arbiter_t::allocate_reads(): Queue warp=%2u/%3d, reg=%3d, pbank=%3u, queueSize=%3zu\n",
+            //    gpu_sim_cycle, m_shader_sid, op.get_wid(), op.get_reg(), pbank, m_preg_queue[pbank].size());
             m_preg_usage[i]++;
         }
     }
@@ -3128,12 +3128,12 @@ void opndcoll_rfu_t::allocate_cu( unsigned port_num )
             if(preg_banks > 0) {
                 for(unsigned op=0; op<MAX_REG_OPERANDS; op++) {
                     int r = inst->arch_reg.src[op];
-                    if( (r >= 0) && (((unsigned)r) < (m_shader->get_config()->gpgpu_preg_nregs))) {
+                    if( (r > 0) && (((unsigned)r) <= (m_shader->get_config()->gpgpu_preg_nregs))) {
                         usesPreg = true;
                         break;
                     }
                     r = inst->arch_reg.dst[op];
-                    if( (r >= 0) && (((unsigned)r) < (m_shader->get_config()->gpgpu_preg_nregs))) {
+                    if( (r > 0) && (((unsigned)r) <= (m_shader->get_config()->gpgpu_preg_nregs))) {
                         usesPreg = true;
                         break;
                     }
@@ -3182,7 +3182,7 @@ void opndcoll_rfu_t::allocate_reads()
         unsigned reg = r->get_reg();
         unsigned wid = r->get_wid();
         unsigned bank = register_bank(reg,wid,m_num_banks,m_bank_warp_shift);
-        if (reg < m_shader->get_config()->gpgpu_preg_nregs) {// PREG read
+        if ((reg > 0) && (reg <= m_shader->get_config()->gpgpu_preg_nregs)) {// PREG read
             m_cu[r->get_oc_id()]->collect_operand(r->get_operand());
         } else {
             m_arbiter.allocate_for_read(bank,*r);
