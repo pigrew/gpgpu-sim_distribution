@@ -55,6 +55,9 @@
 #include "traffic_breakdown.h"
 extern unsigned long long gpu_sim_cycle;
 
+extern long gpu_preg_readcount;
+extern long gpu_preg_writecount;
+
 #define NO_OP_FLAG            0xFF
 
 /* READ_PACKET_SIZE:
@@ -1209,7 +1212,7 @@ protected:
 
    enum mem_stage_stall_type m_mem_rc;
 
-   shader_core_stats *m_stats; 
+   public: shader_core_stats *m_stats; 
 
    // for debugging
    unsigned long long m_last_inst_gpu_sim_cycle;
@@ -1937,8 +1940,8 @@ private:
     unsigned m_cluster_id;
     gpgpu_sim *m_gpu;
     const shader_core_config *m_config;
-    shader_core_stats *m_stats;
-    memory_stats_t *m_memory_stats;
+    public:shader_core_stats *m_stats;
+    private:memory_stats_t *m_memory_stats;
     shader_core_ctx **m_core;
 
     unsigned m_cta_issue_next_core;

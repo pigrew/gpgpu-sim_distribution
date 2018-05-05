@@ -1098,8 +1098,17 @@ void gpgpu_sim::gpu_print_stat()
    printf("icnt_total_pkts_simt_to_mem=%ld\n", total_simt_to_mem);
 
    time_vector_print();
+    long regReads=0, regWrites=0;
+    unsigned z = 0;
+    for(unsigned i=0; i<m_config.num_cluster(); i++){
+        for(unsigned j=0; j<m_config.m_shader_config.n_simt_cores_per_cluster; j++){
+            regReads += m_cluster[i]->m_stats->m_read_regfile_acesses[z];
+            regWrites +=   m_cluster[i]->m_stats->m_write_regfile_acesses[z];
+            z++;
+        }
+    }
+   printf("REG STATS (regreads, PRFreads,regwrites,pregwrites): %ld,%ld,%ld,%ld\n", regReads/32, gpu_preg_readcount, regWrites/32, gpu_preg_writecount);
    fflush(stdout);
-
    clear_executed_kernel_info(); 
 }
 

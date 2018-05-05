@@ -3047,6 +3047,9 @@ int register_bank(int regnum, int wid, unsigned num_banks, unsigned bank_warp_sh
 bool opndcoll_rfu_t::writeback( const warp_inst_t &inst )
 {
    assert( !inst.empty() );
+    unsigned preg_banks = m_shader->get_config()->gpgpu_preg_nbanks;
+    if (m_shader->get_config()->gpgpu_preg_nregs == 0)
+        preg_banks = 0;
    std::list<unsigned> regs = m_shader->get_regs_written(inst);
    std::list<unsigned>::iterator r;
    unsigned n=0;
@@ -3056,10 +3059,11 @@ bool opndcoll_rfu_t::writeback( const warp_inst_t &inst )
       if( m_arbiter.bank_idle(bank) ) {
           m_arbiter.allocate_bank_for_write(bank,op_t(&inst,reg,m_num_banks,m_bank_warp_shift));
       } else {
-          return false;
+          //return false;
       }
    }
-   for(unsigned i=0;i<(unsigned)regs.size();i++){
+    unsigned i;
+   for( r=regs.begin(), i=0; r!=regs.end(); ++r, i++ ) {
 	      if(m_shader->get_config()->gpgpu_clock_gated_reg_file){
 	    	  unsigned active_count=0;
 	    	  for(unsigned i=0;i<m_shader->get_config()->warp_size;i=i+m_shader->get_config()->n_regfile_gating_group){
@@ -3072,7 +3076,11 @@ bool opndcoll_rfu_t::writeback( const warp_inst_t &inst )
 	    	  }
 	    	  m_shader->incregfile_writes(active_count);
 	      }else{
-	    	  m_shader->incregfile_writes(m_shader->get_config()->warp_size);//inst.active_count());
+                if(preg_banks > 0 && *r > 0 && (*r <= m_shader->get_config()->gpgpu_preg_nregs)) {
+                    gpu_preg_writecount++;
+                } else {
+                    m_shader->incregfile_writes(m_shader->get_config()->warp_size);//inst.active_count());
+                }
 	      }
    }
    return true;
@@ -3172,7 +3180,8 @@ void opndcoll_rfu_t::allocate_cu( unsigned port_num )
         }
     }
 }
-
+long gpu_preg_readcount;
+long gpu_preg_writecount;
 void opndcoll_rfu_t::allocate_reads()
 {
    // process read requests that do not have conflicts
@@ -3184,6 +3193,7 @@ void opndcoll_rfu_t::allocate_reads()
         unsigned bank = register_bank(reg,wid,m_num_banks,m_bank_warp_shift);
         if ((reg > 0) && (reg <= m_shader->get_config()->gpgpu_preg_nregs)) {// PREG read
             m_cu[r->get_oc_id()]->collect_operand(r->get_operand());
+            gpu_preg_readcount++;
         } else {
             m_arbiter.allocate_for_read(bank,*r);
             read_ops[bank] = *r;
