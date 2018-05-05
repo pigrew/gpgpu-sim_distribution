@@ -3111,55 +3111,63 @@ void opndcoll_rfu_t::allocate_cu( unsigned port_num )
     unsigned preg_banks = m_shader->get_config()->gpgpu_preg_nbanks;
     if (m_shader->get_config()->gpgpu_preg_nregs == 0)
         preg_banks = 0;
+    
     assert(inp.m_in.size() == 1); 
     for (unsigned i = 0; i < inp.m_in.size(); i++) {
-        if( !((*inp.m_in[i]).has_ready()))
-            continue;
-        //find a free cu 
-	    bool allocated = false;
+        unsigned minWarpInstUid = 0;
+        warp_inst_t** insth;
         bool usesPreg = false;
-        warp_inst_t* inst = *(inp.m_in[i]->get_ready());
-        // Check if op uses a PREG, since if so, it must be sent to only particular CU.
-        if(preg_banks > 0) {
-            for(unsigned op=0; op<MAX_REG_OPERANDS; op++) {
-                int r = inst->arch_reg.src[op];
-                if( (r >= 0) && (((unsigned)r) < (m_shader->get_config()->gpgpu_preg_nregs))) {
-                    usesPreg = true;
-                    break;
-                }
-                r = inst->arch_reg.dst[op];
-                if( (r >= 0) && (((unsigned)r) < (m_shader->get_config()->gpgpu_preg_nregs))) {
-                    usesPreg = true;
-                    break;
-                }
-            }
-        }
-        unsigned warp_id = inst->warp_id();
-        unsigned n_cu = 0;
-        for(uint_vector_t::iterator cu_set_id = inp.m_cu_sets.begin(); cu_set_id != inp.m_cu_sets.end(); ++cu_set_id) {
-            n_cu += m_cus[*cu_set_id].size();
-        }
-        if (preg_banks > 0)
-            assert((n_cu >= preg_banks) && "Num banks must be less than or equal to the number of CU for this execution unit type");
-        
-        //printf("port %d has %d cu\n", port_num, n_cu);
-        for(uint_vector_t::iterator cu_set_id = inp.m_cu_sets.begin(); cu_set_id != inp.m_cu_sets.end(); ++cu_set_id) {
-            std::vector<collector_unit_t>& cu_set = m_cus[*cu_set_id];
-            for (unsigned k = 0; k < cu_set.size(); ++k) {
-                if(cu_set[k].is_free()) {
-                    if(usesPreg) {
-                        if( (warp_id % preg_banks) != (cu_set[k].get_id() % preg_banks)) {
-                            printf("PREG: wrong bank, wid=%2u/%u\n", m_shader->get_sid(), warp_id);
-                            continue;
-                        }
+        // Must to loop if in preg mode
+        while(NULL != (insth = (inp.m_in[i]->get_ready(minWarpInstUid)))) {
+            warp_inst_t* inst = *insth;
+            minWarpInstUid = inst->get_uid();
+            //find a free cu 
+            usesPreg = false;
+            // Check if op uses a PREG, since if so, it must be sent to only particular CU.
+            if(preg_banks > 0) {
+                for(unsigned op=0; op<MAX_REG_OPERANDS; op++) {
+                    int r = inst->arch_reg.src[op];
+                    if( (r >= 0) && (((unsigned)r) < (m_shader->get_config()->gpgpu_preg_nregs))) {
+                        usesPreg = true;
+                        break;
                     }
-                    collector_unit_t *cu = &cu_set[k];
-                    allocated = cu->allocate(inp.m_in[i],inp.m_out[i]);
-                    assert(allocated);// Will it ever fail? It better not, or else the next line is wrong!
-                    m_arbiter.add_read_requests(cu);
-                    return; // Only accept a single item from each port
+                    r = inst->arch_reg.dst[op];
+                    if( (r >= 0) && (((unsigned)r) < (m_shader->get_config()->gpgpu_preg_nregs))) {
+                        usesPreg = true;
+                        break;
+                    }
                 }
             }
+            unsigned warp_id = inst->warp_id();
+            unsigned n_cu = 0;
+            for(uint_vector_t::iterator cu_set_id = inp.m_cu_sets.begin(); cu_set_id != inp.m_cu_sets.end(); ++cu_set_id) {
+                n_cu += m_cus[*cu_set_id].size();
+            }
+            if (preg_banks > 0)
+                assert((n_cu >= preg_banks) && "Num banks must be less than or equal to the number of CU for this execution unit type");
+        
+            //printf("port %d has %d cu\n", port_num, n_cu);
+            for(uint_vector_t::iterator cu_set_id = inp.m_cu_sets.begin(); cu_set_id != inp.m_cu_sets.end(); ++cu_set_id) {
+                std::vector<collector_unit_t>& cu_set = m_cus[*cu_set_id];
+                for (unsigned k = 0; k < cu_set.size(); ++k) {
+                    if(cu_set[k].is_free()) {
+                        if(usesPreg) {
+                            if( (warp_id % preg_banks) != (cu_set[k].get_id() % preg_banks)) {
+                                //printf("PREG: wrong bank, wid=%2u/%u\n", m_shader->get_sid(), warp_id);
+                                continue;
+                            }
+                        }
+                        collector_unit_t *cu = &cu_set[k];
+                        bool allocated = cu->allocate(inp.m_in[i],inp.m_out[i]);
+                        assert(allocated);// Will it ever fail? It better not, or else the next line is wrong!
+                        m_arbiter.add_read_requests(cu);
+                        return; // Only accept a single item from each port
+                    }
+                }
+            }
+            // No need to check any further if PREG is disabled, or the found instruction doesn't need a PREG
+            if(preg_banks == 0 || !usesPreg)
+                break;
         }
     }
 }

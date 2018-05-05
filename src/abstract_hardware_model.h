@@ -1161,11 +1161,11 @@ public:
 		move_warp(dest, *ready);
 	}
 
-	warp_inst_t** get_ready(){
+	warp_inst_t** get_ready(unsigned minUid=0){
 		warp_inst_t** ready;
 		ready = NULL;
 		for( unsigned i = 0; i < regs.size(); i++ ) {
-			if( not regs[i]->empty() ) {
+			if( (not regs[i]->empty()) && regs[i]->get_uid() > minUid ) {
 				if( ready and (*ready)->get_uid() < regs[i]->get_uid() ) {
 					// ready is oldest
 				} else {
